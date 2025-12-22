@@ -2,7 +2,7 @@
 
 ## Ajuste de SED de Polvo para N113 (LMC): Implementación y Algoritmo
 
-**Script principal:** `sed_fit_plot_n113_band.py`  
+**Script principal:** `SED.py`  
 **Paper de referencia:** Gong et al. 2024, A&A (arXiv:2405.04719)
 
 ---

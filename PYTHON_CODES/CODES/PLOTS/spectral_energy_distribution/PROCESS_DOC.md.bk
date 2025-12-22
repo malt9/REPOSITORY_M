@@ -1,0 +1,146 @@
+# PROCESS_DOC.md
+
+## Objetivo y alcance
+Este documento describe un procedimiento reproducible para (1) extraer puntos de SED Herschel (PACS100/160 + SPIRE250/350/500) hacia N113, (2) ajustar un modelo de modified blackbody (MBB) compatible con el Apéndice A de Gong et al. (2024), y (3) generar un gráfico superpuesto “estilo paper” que permita comparar tres escenarios: \(\beta=1.96\) fijo, \(\beta\) libre, y un diagnóstico con \(\beta=1.18\pm0.15\). [file:1][file:142][code_file:269]
+
+El alcance de este procedimiento es **fotometría tipo “beam”** (Jy en un haz) a una resolución homogénea (HPBW 40″), y un ajuste paramétrico MBB con parámetros \((T_d, N_{\mathrm H}, \beta)\) y constantes fijadas según Gong et al. (2024). [file:1][file:142]
+
+---
+
+## Trazabilidad de insumos (datos)
+Los puntos SED utilizados están en `n113_sed_points_unbinned.csv` con columnas `band`, `wav_um`, `file`, `I_MJy_sr`, `S_Jy`, `Serr_Jy`. [file:142]
+
+Los nombres de archivo (`file`) incluyen el patrón `conv.s500_remap.sub_mw_cirrus.modsub.fits`, lo que documenta que los mapas fueron **convolucionados a SPIRE500** y que se aplicó una sustracción de cirrus MW (“sub_mw_cirrus”) y un paso “modsub” en el producto. [file:142]
+
+Los valores numéricos de ejemplo (reproducibles) en ese CSV incluyen, entre otros:  
+- PACS100: \(S_\nu \approx 155.52\) Jy (error 10%). [file:142]  
+- PACS160: \(S_\nu \approx 133.93\) Jy (error 10%). [file:142]  
+- SPIRE250: \(S_\nu \approx 52.23\) Jy (error 10%). [file:142]  
+- SPIRE350: \(S_\nu \approx 22.08\) Jy (error 10%). [file:142]  
+- SPIRE500: \(S_\nu \approx 8.90\) Jy (error 10%). [file:142]
+
+---
+
+## Justificación física y consistencia con Gong (2024)
+
+### Modelo radiativo (ecuaciones)
+Gong et al. (2024) define el MBB en el Apéndice A como \(S_\nu = \Omega\,B_\nu(T_d)\,(1-e^{-\tau_\nu})\). [file:1]
+
+En el mismo Apéndice A, se especifica que el total de hidrógeno se obtiene de \(N_{\mathrm H}^{\mathrm{tot}} = \tau_\nu\,r_{\rm GDR}/(\kappa_\nu\,m_{\rm H})\), con \(r_{\rm GDR}=300\) para la LMC. [file:1]
+
+La opacidad se parametriza como \(\kappa_\nu = \kappa_{230}\,(\nu/230\,{\rm GHz})^{\beta}\), usando \(\kappa_{230}=0.8\ {\rm cm^2\,g^{-1}}\) a 230 GHz y \(\beta\) como índice espectral del polvo. [file:1]
+
+### Resolución angular y sólido
+Gong et al. (2024) indica que usa un set Herschel con HPBW=40″, equivalente a \(\Omega = 4.26\times10^{-8}\,{\rm sr}\). [file:1]
+
+En consecuencia, el flujo modelado \(S_\nu\) se interpreta como flujo “en haz” (Jy por beam de 40″), consistente con la forma en que en el paper se grafica \(S\) en Jy en Fig. A.1. [file:1]
+
+### Motivación de los tres ajustes
+Gong et al. (2024) reporta un ajuste con \(\beta=1.96\) fijo (curva naranja) con \(T_d = 19.8\pm2.2\) K y \(N_{\mathrm H}^{\mathrm{tot}} = (7.2\pm1.6)\times10^{22}\ {\rm cm^{-2}}\), y afirma explícitamente que ese ajuste **no reproduce bien** los puntos de 100 y 160 µm. [file:1]
+
+Luego repite el ajuste con \(\beta\) libre (curva azul), obteniendo \(T_d = 36.0\pm5.4\) K, \(N_{\mathrm H}^{\mathrm{tot}} = (5.8\pm0.6)\times10^{22}\ {\rm cm^{-2}}\) y \(\beta = 1.18\pm0.15\), y adopta ese \(N_{\mathrm H}^{\mathrm{tot}}\) para el análisis posterior porque “matchea mejor” los datos. [file:1]
+
+Por lo tanto, superponer (i) \(\beta=1.96\) fijo, (ii) \(\beta\) libre y (iii) el rango diagnóstico \(\beta=1.18\pm0.15\) es conceptualmente correcto porque replica los **dos experimentos de ajuste** que el paper reporta y agrega un “envolvente” que visualiza la incertidumbre en \(\beta\) citada por Gong et al. (2024). [file:1][code_file:269]
+
+---
+
+## Procedimiento reproducible (paso a paso)
+
+### Paso 1 — Definir el set de puntos
+Se toma `wav_um`, `S_Jy` y `Serr_Jy` directamente del CSV `n113_sed_points_unbinned.csv`. [file:142]
+
+Se preserva el 10% de incertidumbre relativo que aparece en el CSV (por construcción `Serr_Jy` ≈ 0.1·`S_Jy` en todas las bandas listadas). [file:142]
+
+### Paso 2 — Implementar el modelo MBB (unidades)
+El modelo implementa el mismo \(S_\nu\) de Gong et al. (2024) usando \(\Omega = 4.26\times10^{-8}\ {\rm sr}\), \(r_{\rm GDR}=300\), \(\kappa_{230}=0.8\ {\rm cm^2\,g^{-1}}\) y \(\nu_0=230\) GHz como valores fijos. [file:1][code_file:269]
+
+Se evalúa \(B_\nu(T)\) (función de Planck) en unidades cgs y se convierte a Jy/sr usando \(1\ {\rm Jy}=10^{-23}\ {\rm erg\ s^{-1}\ cm^{-2}\ Hz^{-1}}\), y luego a Jy multiplicando por \(\Omega\), de forma consistente con la definición de \(S_\nu\) del Apéndice A. [file:1][code_file:269]
+
+### Paso 3 — Ajuste no lineal con pesos (errorbars)
+Para \(\beta\) fijo, se ajustan \((T_d, N_{\mathrm H})\) minimizando residuales ponderados por `Serr_Jy` (equivalente a un \(\chi^2\) bajo errores gaussianos independientes por banda). [file:142][code_file:269]
+
+Para \(\beta\) libre, se ajustan \((T_d, N_{\mathrm H}, \beta)\) con límites amplios (p.ej. \(T_d \in [5,150]\) K y \(\beta \in [-1,4]\)) para evitar soluciones no físicas triviales sin imponer un prior fuerte que contradiga el paper. [file:1][code_file:269]
+
+### Paso 4 — Diagnóstico con banda \(\beta=1.18\pm0.15\)
+Se realizan dos ajustes adicionales con \(\beta\) fijado en \(\beta_{\rm lo}=1.03\) y \(\beta_{\rm hi}=1.33\) para obtener \((T_d, N_{\mathrm H})\) en ambos extremos del rango reportado por Gong et al. (2024). [file:1][code_file:269]
+
+La banda sombreada se define como el envolvente \([\min(S_{\nu,\rm lo},S_{\nu,\rm hi}),\max(S_{\nu,\rm lo},S_{\nu,\rm hi})]\) evaluado en un grid denso de longitudes de onda, lo cual es una representación conservadora del rango inducido por la incertidumbre en \(\beta\) bajo el mismo pipeline de ajuste. [file:1][code_file:269]
+
+### Paso 5 — Gráfico “estilo paper”
+Se grafica en ejes log–log con puntos negros (y errorbars) y curvas de color con leyendas que listan \(T_d\), \(N(\mathrm{H})\) y \(\beta\), imitando el estilo de Fig. A.1. [file:1][code_file:269]
+
+Se guarda la figura como `n113_sed_fits_overlay_band.png` para asegurar reproducibilidad del resultado. [code_file:269]
+
+---
+
+## Chequeos cuantitativos (reproducibles)
+El paper afirma que el ajuste con \(\beta=1.96\) fijo no reproduce bien 100–160 µm, por lo que un chequeo reproducible es verificar que, al ajustar todas las bandas, los residuales en PACS sean típicamente los dominantes (según el set de puntos usado). [file:1][file:142]
+
+El mismo paper reporta \(\beta=1.18\pm0.15\) cuando \(\beta\) es libre, así que un chequeo adicional reproducible es confirmar que el ajuste libre en tu pipeline entregue un \(\beta\) del orden de \(\sim1\) si el set de puntos coincide con el de Gong, o que el rango sombreado cubra razonablemente la dispersión de PACS vs SPIRE si existe tensión. [file:1][file:142][code_file:269]
+
+---
+
+## Por qué el procedimiento es “correcto” (en el sentido técnico)
+Es correcto porque implementa exactamente el modelo MBB y las constantes que Gong et al. (2024) especifica en el Apéndice A (\(\Omega\), \(r_{\rm GDR}\), \(\kappa_{230}\), \(\nu_0\), y los dos modos de ajuste con \(\beta\) fijo o libre). [file:1][code_file:269]
+
+Es correcto porque respeta el hecho empírico clave reportado por Gong et al. (2024): el caso \(\beta=1.96\) fijo puede fallar en PACS100/160, y por eso el paper repite el ajuste con \(\beta\) libre y reporta \(\beta=1.18\pm0.15\). [file:1]
+
+Es correcto (como ingeniería inversa) porque convierte el resultado “\(\beta\) libre” del paper en un test controlado: fijar \(\beta\) en el valor central y mostrar una banda \(\pm 0.15\) permite distinguir discrepancias dominadas por la forma FIR/submm (pendiente) vs discrepancias dominadas por la fotometría/calibración de puntos individuales (p.ej. PACS). [file:1][file:142][code_file:269]
+
+---
+
+## Discrepancia con Gong (2024): causas plausibles y cómo diagnosticarlas
+
+### 1) Diferente set de puntos (PACS/SPIRE) o diferente extracción
+Gong et al. (2024) no publica el CSV de puntos de Fig. A.1 ni detalla el método exacto de extracción puntual (píxel central vs promedio en un haz vs fotometría por apertura), por lo que es posible que tus `S_Jy` difieran aunque los mapas base sean los mismos. [file:1][file:142]
+
+Diagnóstico: repetir la extracción usando exactamente el mismo criterio (si se reconstruye) y verificar si PACS100/160 cambian más que SPIRE, ya que el paper reporta que el desacuerdo fuerte ocurre precisamente en 100–160 µm para \(\beta=1.96\) fijo. [file:1]
+
+### 2) Diferencias de ponderación en el ajuste
+El paper describe el “fit” pero no documenta el esquema de pesos/errores por banda que usó para Fig. A.1, mientras que tu CSV codifica 10% por banda en `Serr_Jy`. [file:1][file:142]
+
+Diagnóstico: evaluar si cambiar los pesos (p.ej. dar menos peso a PACS o usar errores absolutos) desplaza \((T_d,\beta)\), ya que \(\beta\) y \(T_d\) son degenerados y PACS domina el lado Wien. [file:1][file:142]
+
+### 3) Ajustar todas las bandas vs “anclar” con SPIRE
+Gong et al. (2024) afirma que el ajuste con \(\beta=1.96\) fijo no reproduce PACS100/160 y lo atribuye a flattening por componentes de polvo, lo cual en la práctica sugiere que SPIRE puede estar “anclando” el ajuste cuando se insiste en \(\beta\) fijo. [file:1]
+
+Diagnóstico: ajustar solo 250–500 µm (SPIRE) y ver cómo “predice” 100–160 µm, porque esa prueba reproduce el escenario donde el lado Rayleigh–Jeans controla la solución y revela si la tensión es realmente PACS. [file:1][file:142]
+
+### 4) Correcciones de color / integración en banda (bandpass)
+Gong et al. (2024) no menciona explícitamente correcciones de color ni integración del modelo sobre la respuesta espectral de cada banda, y tus puntos pueden estar en una convención fotométrica diferente (dependiendo del pipeline Herschel usado). [file:1]
+
+Diagnóstico: aplicar color-corrections PACS/SPIRE coherentes con un SED MBB iterativo y cuantificar el impacto principalmente en PACS100/160 (donde el espectro cambia más rápido). [file:1][file:142]
+
+### 5) Fondo/foreground (MW cirrus) y baseline local
+Gong et al. (2024) indica que usa un set con foreground de polvo MW sustraído, y tus archivos también contienen `sub_mw_cirrus` en el nombre, pero pequeñas diferencias de versión del producto o del método de baseline local pueden afectar fuerte 100 µm. [file:1][file:142]
+
+Diagnóstico: comparar mapas “antes/después” de la sustracción MW (si están disponibles) o estimar la contribución del fondo con regiones off-source, verificando la sensibilidad mayor en PACS. [file:1]
+
+### 6) Beam/solid angle efectivo
+El paper fija HPBW=40″ y \(\Omega=4.26\times10^{-8}\ {\rm sr}\), pero el “beam sólido efectivo” puede depender del mapa remapeado, del kernel de convolución y de si el valor extraído es “Jy/beam” vs “Jy/pixel” convertido. [file:1][file:142]
+
+Diagnóstico: asegurar que la conversión de intensidad a flujo use consistentemente \(\Omega\) (y no un \(\Omega\) alternativo), y que el valor `S_Jy` del CSV corresponda a esa convención. [file:1][file:142]
+
+### 7) Diferencias binned vs unbinned (y factores geométricos)
+Existen versiones “binned” y “unbinned” en tu entorno (según el nombre del CSV y los artefactos generados en la sesión), y los headers pueden codificar factores de remuestreo/conversión distintos (p.ej. cambios de tamaño de píxel que implican factores de área). [file:142]
+
+Diagnóstico: verificar si los factores de conversión (`FLUXCONV` o equivalentes) y `CDELT` (tamaño de píxel) difieren entre productos, porque un cambio de escala lineal \(\times4\) implica área \(\times16\) y puede inducir discrepancias sistemáticas si se mezcla un producto con otro. [file:142]
+
+### 8) Offset posicional / pointing vs píxel central
+Gong et al. (2024) fija una posición de apuntado para APEX y discute offsets respecto al pico de [CII], lo que sugiere que usar “píxel central” vs “interpolación en coordenadas exactas” puede cambiar los fluxes si el gradiente espacial es fuerte. [file:1]
+
+Diagnóstico: extraer los valores con WCS (interpolación bilineal o nearest) exactamente en la coordenada del paper y comparar con extraer por píxel más cercano. [file:1]
+
+---
+
+## Limitaciones conocidas del procedimiento
+La banda sombreada \(\beta=1.18\pm0.15\) representa la envolvente de dos ajustes extremos y no una propagación bayesiana completa de incertidumbres (p.ej. no integra covarianzas \((T_d,N_{\mathrm H},\beta)\)). [file:1][code_file:269]
+
+El ajuste supone independencia de errores por banda (diagonal en \(\Sigma\)), lo cual puede subestimar incertidumbres si hay correlaciones de calibración entre bandas Herschel. [file:142][code_file:269]
+
+---
+
+## Resultados esperados (qué considerar “match”)
+Se considera una reproducción cualitativa correcta de Gong et al. (2024) si:  
+- el caso \(\beta=1.96\) fijo tiende a “fallar” en PACS100/160 (como declara el paper), y [file:1]  
+- el caso \(\beta\) libre produce un \(\beta\) del orden de \(\sim1\) y una curva que se acerque mejor a todos los puntos (como reporta el paper). [file:1]

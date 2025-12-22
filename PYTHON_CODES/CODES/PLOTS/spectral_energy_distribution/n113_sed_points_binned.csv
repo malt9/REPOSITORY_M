@@ -1,0 +1,6 @@
+band,wav_um,file,I_MJy_sr,S_Jy,Serr_Jy
+PACS100,100.0,lmc_both_pacs_100_12oct12.cal.conv.s500_remap.sub_mw_cirrus.modsub.rebin.fits,2173.5103665381166,92.59154161452376,9.259154161452377
+PACS160,160.0,lmc_both_pacs_160_28sep12.cal.conv.s500_remap.sub_mw_cirrus.modsub.rebin.fits,1833.493198731228,78.1068102659503,7.810681026595031
+SPIRE250,250.0,lmc_both_spire_250_15dec12.cal.conv.s500_remap.sub_mw_cirrus.modsub.rebin.fits,724.100975762281,30.846701567473165,3.0846701567473165
+SPIRE350,350.0,lmc_both_spire_350_15dec12.cal.conv.s500_remap.sub_mw_cirrus.modsub.rebin.fits,309.3692945369934,13.179131947275918,1.317913194727592
+SPIRE500,500.0,lmc_both_spire_500_15dec12.cal.conv.s500_remap.sub_mw_cirrus.modsub.rebin.fits,121.01636963619147,5.155297346501756,0.5155297346501756
